@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:permission_handler/permission_handler.dart';
 import '../services/call_service.dart';
+import '../services/auth_service.dart';
 import '../widgets/call_controls.dart';
 import '../widgets/video_view.dart';
 
@@ -195,9 +196,11 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     final callService = context.watch<CallService>();
-    
+    final authService = context.read<AuthService>();
+    final currentUser = authService.currentUser;
+
     // Show loading indicator if not initialized
-    if (_isLoading || !_isInitialized || callService.localId == null) {
+    if (_isLoading || !_isInitialized) {
       return const Scaffold(
         body: Center(child: CircularProgressIndicator()),
       );
@@ -206,16 +209,46 @@ class _HomeScreenState extends State<HomeScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('WebRTC Caller'),
+        centerTitle: true,
         actions: [
-          Padding(
-            padding: const EdgeInsets.only(right: 16.0, top: 8.0, bottom: 8.0),
-            child: Center(
-              child: Text(
-                'ID: ${callService.localId}',
-                style: const TextStyle(fontSize: 14),
+          if (currentUser != null)
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 8.0),
+              child: Row(
+                children: [
+                  Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      Text(
+                        currentUser.email ?? 'User',
+                        style: const TextStyle(fontSize: 14, color: Colors.white70),
+                      ),
+                      if (callService.localId != null && callService.localId!.isNotEmpty)
+                        Text(
+                          'ID: ${callService.localId}',
+                          style: const TextStyle(fontSize: 12, color: Colors.white54),
+                        ),
+                    ],
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.logout, color: Colors.white70),
+                    tooltip: 'Logout',
+                    onPressed: () async {
+                      try {
+                        await authService.signOut();
+                      } catch (e) {
+                        if (mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text('Error signing out: $e')),
+                          );
+                        }
+                      }
+                    },
+                  ),
+                ],
               ),
             ),
-          ),
         ],
       ),
       body: Column(
