@@ -3,11 +3,7 @@ import 'dart:convert';
 import 'package:web_socket_channel/web_socket_channel.dart';
 import 'package:flutter_webrtc/flutter_webrtc.dart';
 
-enum SignalingState {
-  connected,
-  disconnected,
-  error,
-}
+enum SignalingState { connected, disconnected, error }
 
 class SignalingMessage {
   final String type;
@@ -15,12 +11,7 @@ class SignalingMessage {
   final String? from;
   final String? to;
 
-  SignalingMessage({
-    required this.type,
-    this.data,
-    this.from,
-    this.to,
-  });
+  SignalingMessage({required this.type, this.data, this.from, this.to});
 
   factory SignalingMessage.fromJson(Map<String, dynamic> json) {
     return SignalingMessage(
@@ -32,12 +23,7 @@ class SignalingMessage {
   }
 
   Map<String, dynamic> toJson() {
-    return {
-      'type': type,
-      'data': data,
-      'from': from,
-      'to': to,
-    };
+    return {'type': type, 'data': data, 'from': from, 'to': to};
   }
 }
 
@@ -45,14 +31,14 @@ class SignalingService {
   final String _serverUrl;
   final String _userId;
   WebSocketChannel? _channel;
-  StreamController<SignalingState> _stateController = StreamController<SignalingState>.broadcast();
-  StreamController<SignalingMessage> _messageController = StreamController<SignalingMessage>.broadcast();
+  final StreamController<SignalingState> _stateController =
+      StreamController<SignalingState>.broadcast();
+  final StreamController<SignalingMessage> _messageController =
+      StreamController<SignalingMessage>.broadcast();
 
-  SignalingService({
-    required String serverUrl,
-    required String userId,
-  })  : _serverUrl = serverUrl,
-        _userId = userId {
+  SignalingService({required String serverUrl, required String userId})
+    : _serverUrl = serverUrl,
+      _userId = userId {
     _connect();
   }
 
@@ -69,7 +55,9 @@ class SignalingService {
       await _channel?.sink.close();
 
       // Create new connection
-      _channel = WebSocketChannel.connect(Uri.parse('$_serverUrl/ws?userId=$_userId'));
+      _channel = WebSocketChannel.connect(
+        Uri.parse('$_serverUrl/ws?userId=$_userId'),
+      );
       _stateController.add(SignalingState.connected);
 
       // Listen for incoming messages
@@ -104,25 +92,22 @@ class SignalingService {
     Future.delayed(Duration(seconds: 2), _connect);
   }
 
-  void sendMessage(SignalingMessage message) {
+  Future<void> sendMessage(SignalingMessage message) async {
     _channel?.sink.add(json.encode(message.toJson()));
   }
 
-  void sendOffer(RTCSessionDescription offer, String to) {
+  Future<void> sendOffer(RTCSessionDescription offer, String to) async {
     sendMessage(
       SignalingMessage(
         type: 'offer',
-        data: {
-          'sdp': offer.sdp,
-          'type': offer.type.toString().split('.').last,
-        },
+        data: {'sdp': offer.sdp, 'type': offer.type.toString().split('.').last},
         from: _userId,
         to: to,
       ),
     );
   }
 
-  void sendAnswer(RTCSessionDescription answer, String to) {
+  Future<void> sendAnswer(RTCSessionDescription answer, String to) async {
     sendMessage(
       SignalingMessage(
         type: 'answer',
@@ -136,7 +121,7 @@ class SignalingService {
     );
   }
 
-  void sendIceCandidate(RTCIceCandidate candidate, String to) {
+  Future<void> sendIceCandidate(RTCIceCandidate candidate, String to) async {
     sendMessage(
       SignalingMessage(
         type: 'candidate',
@@ -151,44 +136,20 @@ class SignalingService {
     );
   }
 
-  void sendCallRequest(String to) {
-    sendMessage(
-      SignalingMessage(
-        type: 'call-request',
-        from: _userId,
-        to: to,
-      ),
-    );
+  Future<void> sendCallRequest(String to) async {
+    await sendMessage(SignalingMessage(type: 'call-request', from: _userId, to: to));
   }
 
-  void sendCallAccepted(String to) {
-    sendMessage(
-      SignalingMessage(
-        type: 'call-accepted',
-        from: _userId,
-        to: to,
-      ),
-    );
+  Future<void> sendCallAccepted(String to) async {
+    await sendMessage(SignalingMessage(type: 'call-accepted', from: _userId, to: to));
   }
 
-  void sendCallRejected(String to) {
-    sendMessage(
-      SignalingMessage(
-        type: 'call-rejected',
-        from: _userId,
-        to: to,
-      ),
-    );
+  Future<void> sendCallRejected(String to) async {
+    await sendMessage(SignalingMessage(type: 'call-rejected', from: _userId, to: to));
   }
 
-  void sendEndCall(String to) {
-    sendMessage(
-      SignalingMessage(
-        type: 'end-call',
-        from: _userId,
-        to: to,
-      ),
-    );
+  Future<void> sendEndCall(String to) async {
+    await sendMessage(SignalingMessage(type: 'end-call', from: _userId, to: to));
   }
 
   Future<void> dispose() async {

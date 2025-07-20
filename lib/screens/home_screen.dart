@@ -101,8 +101,16 @@ class _HomeScreenState extends State<HomeScreen> {
   }
   
   Future<void> _acceptCall() async {
-    // In our Firebase signaling flow, the call is automatically accepted
-    // when the offer is processed in the CallService
+    final callService = context.read<CallService>();
+    try {
+      await callService.acceptCall();
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Failed to accept call')),
+        );
+      }
+    }
   }
   
   Future<void> _rejectCall() async {

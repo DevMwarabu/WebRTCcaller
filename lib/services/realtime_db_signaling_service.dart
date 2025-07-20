@@ -1,22 +1,16 @@
 import 'dart:async';
-import 'dart:convert';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_webrtc/flutter_webrtc.dart';
-import 'package:web_socket_channel/web_socket_channel.dart';
 import 'signaling_service.dart';
 
 // Constants for Realtime Database paths
 const String callsPath = 'calls';
-const String incomingPath = 'incoming';
 
 class RealtimeDbSignalingService implements SignalingService {
-  // Server URL is kept for future use if needed
-  @override
-  final String _serverUrl;
   final String _userId;
   final DatabaseReference _database = FirebaseDatabase.instance.ref();
-  final FirebaseAuth _auth = FirebaseAuth.instance;
+  bool _isInitialized = false;
   
   // Stream controllers
   final StreamController<SignalingState> _stateController = 
@@ -24,12 +18,9 @@ class RealtimeDbSignalingService implements SignalingService {
   final StreamController<SignalingMessage> _messageController = 
       StreamController<SignalingMessage>.broadcast();
   
-  DatabaseReference? _userIncomingRef;
-  StreamSubscription<DatabaseEvent>? _callSubscription;
-  bool _isInitialized = false;
+  // Getters for streams
   @override
   Stream<SignalingState> get onStateChange => _stateController.stream;
-  
   @override
   Stream<SignalingMessage> get onMessage => _messageController.stream;
   
@@ -38,38 +29,32 @@ class RealtimeDbSignalingService implements SignalingService {
   
   @override
   bool get isConnected => _isInitialized;
+  
+  // Helper getters for specific message types
+  Stream<SignalingMessage> get onOffer => _messageController.stream
+      .where((message) => message.type == 'offer');
+      
+  Stream<SignalingMessage> get onAnswer => _messageController.stream
+      .where((message) => message.type == 'answer');
+      
+  Stream<SignalingMessage> get onCandidate => _messageController.stream
+      .where((message) => message.type == 'candidate');
+      
+  Stream<SignalingMessage> get onCall => _messageController.stream
+      .where((message) => ['call-request', 'call-accepted', 'call-rejected', 'end-call'].contains(message.type));
 
   RealtimeDbSignalingService({
-    required String serverUrl,
     required String userId,
-  })  : _serverUrl = serverUrl,
-        _userId = userId {
+  }) : _userId = userId {
     _connect();
   }
-
+  
   void _connect() async {
     try {
-      // Sign in anonymously if not already authenticated
-      if (_auth.currentUser == null) {
-        await _auth.signInAnonymously();
-      }
-      
-      // Set up listener for incoming messages
-      _userIncomingRef = _database.child('$callsPath/$_userId/$incomingPath');
-      _callSubscription = _userIncomingRef!.onChildAdded.listen((event) async {
-        final data = event.snapshot.value as Map<dynamic, dynamic>?;
-        if (data != null) {
-          final message = SignalingMessage.fromJson(Map<String, dynamic>.from(data));
-          _messageController.add(message);
-          // Remove the message after processing
-          await event.snapshot.ref.remove();
-        }
-      });
-      
+      // Initialize the service
+      await initialize(_userId);
       _stateController.add(SignalingState.connected);
-      _isInitialized = true;
     } catch (e) {
-      print('Error connecting to Firebase Realtime Database: $e');
       _stateController.add(SignalingState.error);
       _reconnect();
     }
@@ -78,112 +63,110 @@ class RealtimeDbSignalingService implements SignalingService {
   void _reconnect() {
     Future.delayed(Duration(seconds: 2), _connect);
   }
-
-  @override
-  void sendMessage(SignalingMessage message) {
-    if (!_isInitialized) return;
+  
+  // Initialize the service
+  Future<void> initialize(String userId) async {
+    if (_isInitialized) return;
     
-    final messageRef = _database
-        .child('$callsPath/${message.to}/$incomingPath')
-        .push();
-    
-    messageRef.set({
-      'type': message.type,
-      'data': message.data,
-      'from': message.from,
-      'to': message.to,
+    try {
+      // Sign in anonymously if not already authenticated
+      if (FirebaseAuth.instance.currentUser == null) {
+        await FirebaseAuth.instance.signInAnonymously();
+      }
+      
+      // Set up listener for incoming messages
+      _setupMessageListener();
+      
+      _isInitialized = true;
+      _stateController.add(SignalingState.connected);
+    } catch (e) {
+      _stateController.add(SignalingState.error);
+      rethrow;
+    }
+  }
+  
+  void _setupMessageListener() {
+    _database
+        .child('$callsPath/$_userId/incoming')
+        .onChildAdded
+        .listen((event) async {
+      if (event.snapshot.value != null) {
+        final data = Map<String, dynamic>.from(event.snapshot.value as Map);
+        final message = SignalingMessage(
+          type: data['type'],
+          data: data['data'] ?? {},
+          from: data['from'],
+          to: data['to'],
+        );
+        
+        // Forward the message to listeners
+        _messageController.add(message);
+        
+        // Remove the message after processing
+        await event.snapshot.ref.remove();
+      }
+    });
+  }
+  
+  Future<void> _sendMessage(String type, dynamic data, String to) async {
+    final messageRef = _database.child('$callsPath/$to/incoming').push();
+    await messageRef.set({
+      'type': type,
+      'data': data,
+      'from': _userId,
+      'to': to,
       'timestamp': ServerValue.timestamp,
     });
   }
-
+  
   @override
-  void sendOffer(RTCSessionDescription offer, String to) {
-    sendMessage(
-      SignalingMessage(
-        type: 'offer',
-        data: {
-          'sdp': offer.sdp,
-          'type': offer.type.toString().split('.').last,
-        },
-        from: _userId,
-        to: to,
-      ),
-    );
+  Future<void> sendMessage(SignalingMessage message) async {
+    await _sendMessage(message.type, message.data, message.to!);
+  }
+  
+  @override
+  Future<void> sendOffer(RTCSessionDescription offer, String to) async {
+    await _sendMessage('offer', {
+      'sdp': offer.sdp,
+      'type': offer.type.toString().split('.').last,
+    }, to);
+  }
+  
+  @override
+  Future<void> sendAnswer(RTCSessionDescription answer, String to) async {
+    await _sendMessage('answer', {
+      'sdp': answer.sdp,
+      'type': answer.type.toString().split('.').last,
+    }, to);
+  }
+  
+  @override
+  Future<void> sendIceCandidate(RTCIceCandidate candidate, String to) async {
+    await _sendMessage('candidate', {
+      'candidate': candidate.candidate,
+      'sdpMid': candidate.sdpMid,
+      'sdpMLineIndex': candidate.sdpMLineIndex,
+    }, to);
+  }
+  
+  @override
+  Future<void> sendCallRequest(String to) async {
+    await _sendMessage('call-request', null, to);
+  }
+  
+  @override
+  Future<void> sendCallAccepted(String to) async {
+    await _sendMessage('call-accepted', null, to);
+  }
+  
+  @override
+  Future<void> sendCallRejected(String to) async {
+    await _sendMessage('call-rejected', null, to);
   }
 
   @override
-  void sendAnswer(RTCSessionDescription answer, String to) {
-    sendMessage(
-      SignalingMessage(
-        type: 'answer',
-        data: {
-          'sdp': answer.sdp,
-          'type': answer.type.toString().split('.').last,
-        },
-        from: _userId,
-        to: to,
-      ),
-    );
-  }
-
-  @override
-  void sendIceCandidate(RTCIceCandidate candidate, String to) {
-    sendMessage(
-      SignalingMessage(
-        type: 'candidate',
-        data: {
-          'candidate': candidate.candidate,
-          'sdpMid': candidate.sdpMid,
-          'sdpMLineIndex': candidate.sdpMLineIndex,
-        },
-        from: _userId,
-        to: to,
-      ),
-    );
-  }
-
-  @override
-  void sendCallRequest(String to) {
-    sendMessage(
-      SignalingMessage(
-        type: 'call-request',
-        from: _userId,
-        to: to,
-      ),
-    );
-  }
-
-  @override
-  void sendCallAccepted(String to) {
-    sendMessage(
-      SignalingMessage(
-        type: 'call-accepted',
-        from: _userId,
-        to: to,
-      ),
-    );
-  }
-
-  @override
-  void sendCallRejected(String to) {
-    sendMessage(
-      SignalingMessage(
-        type: 'call-rejected',
-        from: _userId,
-        to: to,
-      ),
-    );
-  }
-
-  @override
-  void sendEndCall(String to) {
-    sendMessage(
-      SignalingMessage(
-        type: 'end-call',
-        from: _userId,
-        to: to,
-      ),
-    );
+  Future<void> sendEndCall(String to) async {
+    await _sendMessage('end-call', null, to);
   }
   
 
@@ -192,9 +175,17 @@ class RealtimeDbSignalingService implements SignalingService {
 
   @override
   Future<void> dispose() async {
-    await _callSubscription?.cancel();
-    await _stateController.close();
-    await _messageController.close();
-    _isInitialized = false;
+    try {
+      // Close all stream controllers
+      await _stateController.close();
+      await _messageController.close();
+      
+      // Reset initialization state
+      _isInitialized = false;
+    } catch (e) {
+      // Log any errors during disposal
+      print('Error disposing RealtimeDbSignalingService: $e');
+      rethrow;
+    }
   }
 }
