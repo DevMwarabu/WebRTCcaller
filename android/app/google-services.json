@@ -1,0 +1,127 @@
+{
+  "project_info": {
+    "project_number": "422530131010",
+    "firebase_url": "https://fitverse-b1603-default-rtdb.firebaseio.com",
+    "project_id": "fitverse-b1603",
+    "storage_bucket": "fitverse-b1603.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:422530131010:android:6ec29075922d11fbfc39db",
+        "android_client_info": {
+          "package_name": "com.example.webrtc_caller"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "422530131010-m77iumobios35vour0gmj1m9mcu7jecu.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDu_bkoW5J94IzO9K1rxsGrmSaOuPn9TKs"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "422530131010-m77iumobios35vour0gmj1m9mcu7jecu.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "422530131010-d04243j5mkjk8fsc5o92tvd05b8mucei.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.fitverse.gym.fitverse"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:422530131010:android:ce0c6f2f46359a15fc39db",
+        "android_client_info": {
+          "package_name": "com.fitverse.gym.fitverse"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "422530131010-uf19gq4fj1hs465n4mdb09l2r7tqiqbh.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.fitverse.gym.fitverse",
+            "certificate_hash": "50e24ec038ff02b8a04006d009de0390a819609b"
+          }
+        },
+        {
+          "client_id": "422530131010-m77iumobios35vour0gmj1m9mcu7jecu.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDu_bkoW5J94IzO9K1rxsGrmSaOuPn9TKs"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "422530131010-m77iumobios35vour0gmj1m9mcu7jecu.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "422530131010-d04243j5mkjk8fsc5o92tvd05b8mucei.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.fitverse.gym.fitverse"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:422530131010:android:0fc6d39efb75a154fc39db",
+        "android_client_info": {
+          "package_name": "com.webrtccaller"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "422530131010-m77iumobios35vour0gmj1m9mcu7jecu.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDu_bkoW5J94IzO9K1rxsGrmSaOuPn9TKs"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "422530131010-m77iumobios35vour0gmj1m9mcu7jecu.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "422530131010-d04243j5mkjk8fsc5o92tvd05b8mucei.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.fitverse.gym.fitverse"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
