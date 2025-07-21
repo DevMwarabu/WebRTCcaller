@@ -59,8 +59,13 @@ dependencies:
   # Firebase Storage (optional, for file sharing)
   firebase_storage: ^12.4.9
 
+  # Audio playback for ringtones
+  audioplayers: ^5.2.1
+
   # For responsive UI
   responsive_builder: ^0.7.1
+
+  uuid: ^4.5.1
 
 dev_dependencies:
   flutter_test:
@@ -78,6 +83,9 @@ dev_dependencies:
 
 # The following section is specific to Flutter packages.
 flutter:
+  # Assets configuration
+  assets:
+    - assets/sounds/
 
   # The following line ensures that the Material Icons font is
   # included with your application, so that you can use the icons in

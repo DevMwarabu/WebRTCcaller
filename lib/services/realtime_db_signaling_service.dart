@@ -86,10 +86,12 @@ class RealtimeDbSignalingService implements SignalingService {
   }
   
   void _setupMessageListener() {
+    print('Setting up message listener for user: $_userId');
     _database
         .child('$callsPath/$_userId/incoming')
         .onChildAdded
         .listen((event) async {
+      print('New message received: ${event.snapshot.value}');
       if (event.snapshot.value != null) {
         final data = Map<String, dynamic>.from(event.snapshot.value as Map);
         final message = SignalingMessage(
@@ -109,14 +111,54 @@ class RealtimeDbSignalingService implements SignalingService {
   }
   
   Future<void> _sendMessage(String type, dynamic data, String to) async {
-    final messageRef = _database.child('$callsPath/$to/incoming').push();
-    await messageRef.set({
-      'type': type,
-      'data': data,
-      'from': _userId,
-      'to': to,
-      'timestamp': ServerValue.timestamp,
-    });
+    try {
+      print('Sending message - type: $type, to: $to, data: $data');
+      
+      // Verify database reference
+      final messagesRef = _database.child('$callsPath/$to/incoming');
+      print('Database reference path: ${messagesRef.path}');
+      
+      // Check if we can write to the database
+      try {
+        final testRef = messagesRef.push();
+        final testData = {'test': 'test', 'timestamp': ServerValue.timestamp};
+        print('Testing database write access...');
+        await testRef.set(testData);
+        print('Database write test successful');
+        await testRef.remove();
+      } catch (e) {
+        print('ERROR: Database write test failed: $e');
+        throw Exception('Cannot write to database: $e');
+      }
+      
+      // Send the actual message
+      final messageRef = messagesRef.push();
+      final messageData = {
+        'type': type,
+        'data': data,
+        'from': _userId,
+        'to': to,
+        'timestamp': ServerValue.timestamp,
+      };
+      
+      print('Sending message data: $messageData');
+      await messageRef.set(messageData);
+      print('Message sent successfully with key: ${messageRef.key}');
+      
+      // Verify the message was written
+      final snapshot = await messageRef.get();
+      if (snapshot.exists) {
+        print('Message verified in database');
+      } else {
+        print('WARNING: Message not found in database after sending');
+      }
+    } catch (e, stack) {
+      print('ERROR in _sendMessage:');
+      print('Type: $e');
+      print('Message: ${e.toString()}');
+      print('Stack trace: $stack');
+      rethrow;
+    }
   }
   
   @override
