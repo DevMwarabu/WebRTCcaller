@@ -53,9 +53,9 @@ class _MyAppState extends State<MyApp> {
                 body: Center(child: CircularProgressIndicator()),
               );
             } else if (snapshot.hasData) {
-              return const HomeScreen();
+              return  HomeScreen();
             } else {
-              return const LoginScreen();
+              return  LoginScreen();
             }
           },
         ),
